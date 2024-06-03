@@ -4,6 +4,8 @@
 Keras-LSTM.ipynb file contains a basic model made with LSTM
 ## CatBoost
 CatBoostRegressor.ipynb file contains basic CatBoostRegressor with grid search.
+## Prophet
+Prophet.ipynb file contains Meta's Prophet.
 
 ## TO-DO:
 - Wrapping all together
@@ -12,7 +14,6 @@ CatBoostRegressor.ipynb file contains basic CatBoostRegressor with grid search.
   
 ### - Predictions with:
 - Xgboost
-- Prophet
 - LightGBM
 - Random Forest Regressor
 - Gradient Boosting Regressor
