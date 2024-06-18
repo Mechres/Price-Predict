@@ -9,9 +9,10 @@ from sklearn.metrics import mean_squared_error
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-import ta # Library for technical indicators
+import ta  # Library for technical indicators
 from ta.momentum import RSIIndicator
 import pandas as pd
+
 
 class Lstm:
     def __init__(self):
@@ -50,8 +51,6 @@ class Lstm:
 
     @staticmethod
     def model(X_train, y_train, X_test, y_test):
-
-
         inputs = Input(shape=(X_train.shape[1], 1))  # Adjust input shape
         x = Bidirectional(LSTM(units=128, return_sequences=True))(inputs)
         x = Dropout(0.2)(x)
@@ -64,12 +63,12 @@ class Lstm:
         model.compile(optimizer=Adam(learning_rate=0.0001), loss='mse')
         model.fit(X_train, y_train, batch_size=32, epochs=100, validation_data=(X_test, y_test), verbose=2)
         return model
+
     @staticmethod
     def yhat(model, X_test, y_test, scaler):
         yhat = model.predict(X_test, verbose=0)
 
-        
-        y_test = scaler.inverse_transform(y_test)   # Use scaler_y
+        y_test = scaler.inverse_transform(y_test)  # Use scaler_y
         yhat = scaler.inverse_transform(yhat)
 
         rmse = math.sqrt(mean_squared_error(y_test, yhat))
@@ -86,6 +85,14 @@ class Lstm:
 
         return rmse
 
+    def save(self):
+        pass
+
+    def load(self):
+        pass
+
+
+''''' Test
 lstm = Lstm()
 X_train, X_test, y_train, y_test, scaler = lstm.yfdown('BTC-USD', '2020-05-24', '2024-06-02')
 X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
@@ -93,3 +100,4 @@ X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 model = lstm.model(X_train, y_train, X_test, y_test)
 rmse = lstm.yhat(model, X_test, y_test, scaler)
 print(f'RMSE: {rmse}')
+'''''
