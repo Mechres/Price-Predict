@@ -9,10 +9,10 @@ from sklearn.metrics import mean_squared_error
 import math
 import numpy as np
 import matplotlib.pyplot as plt
-import ta  # Library for technical indicators
+import ta
 from ta.momentum import RSIIndicator
 import pandas as pd
-
+import pickle
 
 class Lstm:
     def __init__(self):
@@ -29,7 +29,6 @@ class Lstm:
         rsi_indicator = RSIIndicator(close=df["Close"], window=14)  # RSI indicator
         df['RSI'] = rsi_indicator.rsi()
 
-        # Time Features (Example)
         df['Day_of_Week'] = pd.to_datetime(df.index).dayofweek  # 0: Monday, ..., 6: Sunday
 
         # Shift for Previous Values
@@ -73,7 +72,7 @@ class Lstm:
 
         rmse = math.sqrt(mean_squared_error(y_test, yhat))
 
-        # Plotting
+        # Plot
         plt.figure(figsize=(12, 6))
         plt.plot(y_test, label='Actual Price')
         plt.plot(yhat, label='Predicted Price')
@@ -85,11 +84,14 @@ class Lstm:
 
         return rmse
 
-    def save(self):
-        pass
+    def save_model(model, scaler, filename):
+        with open(filename, 'wb') as f:
+            pickle.dump({'model': model, 'scaler': scaler}, f)
 
-    def load(self):
-        pass
+    def load_model(filename):
+        with open(filename, 'rb') as f:
+            data = pickle.load(f)
+            return data['model'], data['scaler']
 
 
 ''''' Test
