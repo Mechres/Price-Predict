@@ -35,7 +35,7 @@ def main():
             X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
             X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
             model = Lstm.model(X_train, y_train, X_test, y_test)
-            rmse = Lstm.yhat(model, X_test, y_test, scaler)
+            rmse = Lstm.yhat(ticker, model, X_test, y_test, scaler)
             print(f'RMSE: {rmse}')
             savemodel = input("Save model? Y/N  ")
             if savemodel == "Y":
@@ -56,7 +56,7 @@ def main():
             X_train, X_test, y_train, y_test = CatboostPredictor().yfdown(ticker, start_Date, end_Date)
             best_params = CatboostPredictor.searchcatboost(X_train=X_train, y_train=y_train)
             pred = CatboostPredictor.catboost_model(X_train, y_train, X_test, y_test, best_params)
-            CatboostPredictor.plot_catboost(pred, y_test)
+            CatboostPredictor.plot_catboost(ticker, pred, y_test)
             savemodel = input("Save model? Y/N  ")
             if savemodel == "Y":
                 CatboostPredictor.savemodel()
@@ -101,7 +101,7 @@ def main():
             end_Date = input("End Date (YYYY-MM-DD): ")
             X_train, X_test, y_train, y_test, scaler_y = xg.yfdown(ticker, start_Date, end_Date)
             y_test_real, y_pred_real = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
-            xg.plot(y_test_real, y_pred_real)
+            xg.plot(ticker, y_test_real, y_pred_real)
 
             savemodel = input("Save model? Y/N  ")
             if savemodel == "Y":
@@ -118,10 +118,10 @@ def main():
             start_Date = input("Start Date (YYYY-MM-DD): ")
             end_Date = input("End Date (YYYY-MM-DD): ")
             X_train, X_test, y_train, y_test, scaler_y = LGBMRegressorModel.yfdown(ticker, start_Date, end_Date)
-            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(X_train, y_train, X_test, y_test, scaler_y)
+            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test, scaler_y)
             best_params = grid_search.best_params_
             model = LGBMRegressorModel.model(X_train, y_train, X_test, y_test, best_params)
-            rmse = LGBMRegressorModel.yhat(model, X_test, y_test, scaler_y)
+            rmse = LGBMRegressorModel.yhat(ticker, model, X_test, y_test, scaler_y)
             print(f'RMSE: {rmse}')
 
             savemodel = input("Save model? Y/N  ")

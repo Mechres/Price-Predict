@@ -86,12 +86,12 @@ def xgbst(X_train, X_test, y_train, y_test, scaler_y):
 
 
 @staticmethod
-def plot(y_test_real, y_pred_real):
+def plot(ticker, y_test_real, y_pred_real):
     # Plot actual vs. predicted prices
     plt.figure(figsize=(12, 6))
     plt.plot(y_test_real, label="Actual Price", color="blue")
     plt.plot(y_pred_real, label="Predicted Price", color="red")
-    plt.title("BTC-USD Actual vs. Predicted Prices - XGBoost Model")
+    plt.title(ticker + " Actual vs. Predicted Prices - XGBoost Model")
     plt.xlabel("Date")
     plt.ylabel("Price")
     plt.legend()

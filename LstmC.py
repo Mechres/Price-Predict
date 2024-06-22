@@ -64,7 +64,7 @@ class Lstm:
         return model
 
     @staticmethod
-    def yhat(model, X_test, y_test, scaler):
+    def yhat(ticker, model, X_test, y_test, scaler):
         yhat = model.predict(X_test, verbose=0)
 
         y_test = scaler.inverse_transform(y_test)  # Use scaler_y
@@ -76,7 +76,7 @@ class Lstm:
         plt.figure(figsize=(12, 6))
         plt.plot(y_test, label='Actual Price')
         plt.plot(yhat, label='Predicted Price')
-        plt.title('Bitcoin Price Prediction - LSTM Model')
+        plt.title(ticker + ' Price Prediction - LSTM Model')
         plt.xlabel('Time')
         plt.ylabel('Price')
         plt.legend()

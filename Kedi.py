@@ -63,8 +63,9 @@ class CatboostPredictor:
         return pred
 
     @staticmethod
-    def plot_catboost(pred, y_test):
+    def plot_catboost(ticker, pred, y_test):
         plt.figure(figsize=(14, 7))
+        plt.title(ticker + " Actual vs. Predicted Prices - Catboost Model")
         plt.plot(y_test.index, y_test, label='Real')
         plt.plot(y_test.index, pred, label='Prediction')
         plt.legend()

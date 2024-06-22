@@ -77,7 +77,7 @@ class LGBMRegressorModel:
         return model
 
     @staticmethod
-    def grid(X_train, y_train, X_test, y_test, scaler_y):
+    def grid(ticker, X_train, y_train, X_test, y_test, scaler_y):
         param_grid = {
             'num_leaves': [16, 31, 64, 128],
             'learning_rate': [0.1, 0.01, 0.05, 0.1],
@@ -104,14 +104,14 @@ class LGBMRegressorModel:
                         callbacks=[early_stopping_callback])
 
         best_model = grid_search.best_estimator_
-        rmse = LGBMRegressorModel.yhat(best_model, X_test, y_test, scaler_y)
+        rmse = LGBMRegressorModel.yhat(ticker, best_model, X_test, y_test, scaler_y)
         print(f'RMSE: {rmse}')
         print("Best Parameters:", grid_search.best_params_)
 
         return grid_search, grid_search.best_params_
 
     @staticmethod
-    def yhat(model, X_test, y_test, scaler):
+    def yhat(ticker, model, X_test, y_test, scaler):
         yhat = model.predict(X_test)
         y_test = scaler.inverse_transform(y_test)
         yhat = scaler.inverse_transform(yhat.reshape(-1, 1))  # Reshape for scaler
@@ -122,7 +122,7 @@ class LGBMRegressorModel:
         plt.figure(figsize=(12, 6))
         plt.plot(y_test, label='Actual Price')
         plt.plot(yhat, label='Predicted Price')
-        plt.title('Bitcoin Price Prediction - LGBM Model')
+        plt.title(ticker + ' Price Prediction - LGBM Model')
         plt.xlabel('Time')
         plt.ylabel('Price')
         plt.legend()
