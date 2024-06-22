@@ -1,4 +1,4 @@
-# Bitcoin Price Prediction with Various Neural Networks
+# Crypto & Stock Price Prediction with Various Neural Networks
 
 Main.py file let's you select model, start & end date, currently Lstm, Catboost, Prophet, XGBoost and LGBM is usable.
 
@@ -44,6 +44,13 @@ These files provide basic implementations of the models, which you can reference
 - CatBoostRegressor.ipynb: Shows a simple CatBoostRegressor example with grid search.
 - Prophet.ipynb: Demonstrates the basic usage of Facebook's Prophet library.
 
+
+## Screenshots
+
+![Screenshot1](https://i.imgur.com/P6u9Eg1.png)
+![Screenshot2](https://i.imgur.com/W8ucKjX.png)
+![Screenshot3](https://i.imgur.com/4Frsf3w.png)
+![Screenshot4](https://i.imgur.com/p4SZXei.png)
 
 ## Contributing:
 
