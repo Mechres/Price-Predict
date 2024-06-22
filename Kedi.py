@@ -13,7 +13,8 @@ class CatboostPredictor:
     def __init__(self):
         pass
 
-    def yfdown(self, ticker, start, end):
+    @staticmethod
+    def yfdown(ticker, start, end):
         df = yf.download(ticker, start=start, end=end)
         df = df[['Close']].dropna()
         df['Prev_Close'] = df['Close'].shift(1)
@@ -24,6 +25,7 @@ class CatboostPredictor:
         print(X_train.shape, X_test.shape, y_train.shape, y_test.shape)
         return X_train, X_test, y_train, y_test
 
+    @staticmethod
     def searchcatboost(X_train, y_train):
         train_pool = Pool(X_train, y_train)
 
@@ -48,6 +50,7 @@ class CatboostPredictor:
         return best_params
 
 
+    @staticmethod
     def catboost_model(X_train, y_train, X_test, y_test, best_params):
         model = CatBoostRegressor(**best_params)
         model.fit(X_train, y_train, eval_set=(X_test, y_test), use_best_model=True)
@@ -58,15 +61,21 @@ class CatboostPredictor:
         print(f"MAE: {mean_absolute_error(y_test, pred)}")
         print(f"MAPE: {mean_absolute_percentage_error(y_test, pred)}")
         return pred
+
+    @staticmethod
     def plot_catboost(pred, y_test):
         plt.figure(figsize=(14, 7))
         plt.plot(y_test.index, y_test, label='Real')
         plt.plot(y_test.index, pred, label='Prediction')
         plt.legend()
         plt.show()
-    def savemodel(self):
+
+    @staticmethod
+    def savemodel():
         pass
-    def usemodel(self):
+
+    @staticmethod
+    def usemodel():
         pass
 
 #Add Save model & Use model!

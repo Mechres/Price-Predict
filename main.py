@@ -1,6 +1,7 @@
 from Kedi import CatboostPredictor
 from LstmC import Lstm
 from prop import MProphet
+from lgb import LGBMRegressorModel
 import xg
 import numpy as np
 
@@ -8,15 +9,15 @@ import numpy as np
 #Add Ticker selection
 #Add GUI
 #Load&Save
-
+#Yfdown should be here and used once.
 def main():
-
     ticker = 'BTC-USD'
 
     print("1.LSTM")
     print("2.Catboost")
     print("3.Prophet")
     print("4.Xgboost")
+    print("5.LGBM")
     selection = input("Select Model:    ")
 
     if selection == "1":
@@ -107,8 +108,30 @@ def main():
                 xg.savemodel()
             else:
                 pass
+    elif selection == "5":
+        print("LGBM selected.")
+        print("Load saved model? (Must be in same directory.)")
+        selection_c = input("Y/N:    ")
+        if selection_c == "Y":
+            LGBMRegressorModel.loadmodel()
+        elif selection_c == "N":
+            start_Date = input("Start Date (YYYY-MM-DD): ")
+            end_Date = input("End Date (YYYY-MM-DD): ")
+            X_train, X_test, y_train, y_test, scaler_y = LGBMRegressorModel.yfdown(ticker, start_Date, end_Date)
+            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(X_train, y_train, X_test, y_test, scaler_y)
+            best_params = grid_search.best_params_
+            model = LGBMRegressorModel.model(X_train, y_train, X_test, y_test, best_params)
+            rmse = LGBMRegressorModel.yhat(model, X_test, y_test, scaler_y)
+            print(f'RMSE: {rmse}')
+
+            savemodel = input("Save model? Y/N  ")
+            if savemodel == "Y":
+                LGBMRegressorModel.savemodel()
+            else:
+                pass
     else:
         print('Incorrect Input')
+
 
 if __name__ == "__main__":
     main()

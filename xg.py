@@ -91,7 +91,7 @@ def plot(y_test_real, y_pred_real):
     plt.figure(figsize=(12, 6))
     plt.plot(y_test_real, label="Actual Price", color="blue")
     plt.plot(y_pred_real, label="Predicted Price", color="red")
-    plt.title("BTC-USD Actual vs. Predicted Prices")
+    plt.title("BTC-USD Actual vs. Predicted Prices - XGBoost Model")
     plt.xlabel("Date")
     plt.ylabel("Price")
     plt.legend()
