@@ -37,7 +37,7 @@ LightGBM is a gradient boosting framework that uses tree based learning algorith
 - At current level models made with this "tool" is not usable for crpyto market but feel free to modify, use, experiment on it.
 - Experimental Project: This is a side project for educational purposes and should not be used as the sole basis for investment decisions.
 
-# Old Files(For Reference):
+## Old Files(For Reference):
 These files provide basic implementations of the models, which you can reference for understanding the underlying algorithms and principles:
 
 - Keras-LSTM.ipynb: Illustrates the fundamentals of LSTM models in Keras.
@@ -45,7 +45,7 @@ These files provide basic implementations of the models, which you can reference
 - Prophet.ipynb: Demonstrates the basic usage of Facebook's Prophet library.
 
 
-# Contributing:
+## Contributing:
 
 Contributions and feedback are welcome! Feel free to open issues or submit pull requests to help improve this project.
 Let me know if you'd like any other modifications!
