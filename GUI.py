@@ -1,15 +1,8 @@
 import tkinter as tk
 from tkinter import ttk
-from Kedi import CatboostPredictor
-from LstmC import Lstm
-from prop import MProphet
-import xg
 import numpy as np
 import pickle
-from lgb import LGBMRegressorModel
 
-
-#This is a demo and it's not completed!
 
 def run_selected_model(selection, ticker):
     start_date = start_date_entry.get()
@@ -17,9 +10,12 @@ def run_selected_model(selection, ticker):
 
     if selection == "1":
         # LSTM
+        from LstmC import Lstm
         model_path = "lstm_model.pkl"
         if load_var.get():
-            model, scaler = load_model(model_path)
+            model, scaler = Lstm.load_model(model_path)
+            print("Model loaded")
+            #Add use model.
         else:
             X_train, X_test, y_train, y_test, scaler = Lstm.yfdown(ticker, start_date, end_date)
             X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
@@ -28,11 +24,12 @@ def run_selected_model(selection, ticker):
             rmse = Lstm.yhat(ticker, model, X_test, y_test, scaler)
             print(f'RMSE: {rmse}')
             if save_var.get():
-                save_model(model, scaler, model_path)
+                Lstm.save_model(model, scaler, model_path)
                 print("Model saved.")
 
     if selection == "2":
         #Catboost
+        from Kedi import CatboostPredictor
         if load_var.get():
             pass
         else:
@@ -44,7 +41,14 @@ def run_selected_model(selection, ticker):
                 pass
     if selection == "3":
         #Prophet
+        from prop import MProphet
         if load_var.get():
+            mp_loaded = MProphet(ticker, start_date, end_date)
+            mp_loaded.load_model()
+            mp_loaded.download_data()
+            mp_loaded.fit_predict(periods=30)  # forecast for 30 days
+            mp_loaded.plot()
+            mp_loaded.cross_validate()
             pass
         else:
             param_grid = {
@@ -61,37 +65,31 @@ def run_selected_model(selection, ticker):
             mp_final.plot()
             mp_final.cross_validate()
             if save_var.get():
-                pass
+                mp_final.save_model()
     if selection == "4":
         #XGBoost
+        import xg
         if load_var.get():
             xg.loadmodel()
         else:
             X_train, X_test, y_train, y_test, scaler_y = xg.yfdown(ticker, start_date, end_date)
-            y_test_real, y_pred_real = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
+            y_test_real, y_pred_real, model = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
             xg.plot(ticker, y_test_real, y_pred_real)
             if save_var.get():
-                xg.savemodel()
+                xg.savemodel(model)
     if selection == "5":
+        #LGBM
+        from lgb import LGBMRegressorModel
         if load_var.get():
             pass
         else:
             X_train, X_test, y_train, y_test, scaler_y = LGBMRegressorModel.yfdown(ticker, start_date, end_date)
-            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test, scaler_y)
+            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test,
+                                                                            scaler_y)
             best_params = grid_search.best_params_
             model = LGBMRegressorModel.model(X_train, y_train, X_test, y_test, best_params)
             rmse = LGBMRegressorModel.yhat(ticker, model, X_test, y_test, scaler_y)
             print(f'RMSE: {rmse}')
-
-def save_model(model, scaler, filename):
-    with open(filename, 'wb') as f:
-        pickle.dump({'model': model, 'scaler': scaler}, f)
-
-
-def load_model(filename):
-    with open(filename, 'rb') as f:
-        data = pickle.load(f)
-        return data['model'], data['scaler']
 
 
 window = tk.Tk()

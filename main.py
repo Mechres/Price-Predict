@@ -1,8 +1,3 @@
-from Kedi import CatboostPredictor
-from LstmC import Lstm
-from prop import MProphet
-from lgb import LGBMRegressorModel
-import xg
 import numpy as np
 
 
@@ -21,6 +16,8 @@ def main():
     selection = input("Select Model:    ")
 
     if selection == "1":
+        #LSTM
+        from LstmC import Lstm
         model_path = "lstm_model.pkl"
         print("LSTM selected.")
         print("Load saved model? (Must be in same directory.)")
@@ -45,6 +42,8 @@ def main():
                 pass
 
     elif selection == "2":
+        #Catboost
+        from Kedi import CatboostPredictor
         print("Catboost Regressor selected.")
         print("Load saved model? (Must be in same directory.)")
         selection_c = input("Y/N:    ")
@@ -67,6 +66,7 @@ def main():
             print("")
     elif selection == "3":
         #Prophet
+        from prop import MProphet
         print("Prophet selected.")
         print("Load saved model? (Must be in same directory.)")
         selection_c = input("Y/N:    ")
@@ -91,6 +91,8 @@ def main():
             mp_final.cross_validate()
 
     elif selection == "4":
+        #XGBoost
+        import xg
         print("XgboostRegressor selected.")
         print("Load saved model? (Must be in same directory.)")
         selection_c = input("Y/N:    ")
@@ -100,15 +102,18 @@ def main():
             start_Date = input("Start Date (YYYY-MM-DD): ")
             end_Date = input("End Date (YYYY-MM-DD): ")
             X_train, X_test, y_train, y_test, scaler_y = xg.yfdown(ticker, start_Date, end_Date)
-            y_test_real, y_pred_real = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
+            y_test_real, y_pred_real, model = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
             xg.plot(ticker, y_test_real, y_pred_real)
 
             savemodel = input("Save model? Y/N  ")
             if savemodel == "Y":
-                xg.savemodel()
+                xg.savemodel(model)
+                print("Model saved.")
             else:
                 pass
     elif selection == "5":
+        #LGBM
+        from lgb import LGBMRegressorModel
         print("LGBM selected.")
         print("Load saved model? (Must be in same directory.)")
         selection_c = input("Y/N:    ")
@@ -118,7 +123,8 @@ def main():
             start_Date = input("Start Date (YYYY-MM-DD): ")
             end_Date = input("End Date (YYYY-MM-DD): ")
             X_train, X_test, y_train, y_test, scaler_y = LGBMRegressorModel.yfdown(ticker, start_Date, end_Date)
-            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test, scaler_y)
+            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test,
+                                                                            scaler_y)
             best_params = grid_search.best_params_
             model = LGBMRegressorModel.model(X_train, y_train, X_test, y_test, best_params)
             rmse = LGBMRegressorModel.yhat(ticker, model, X_test, y_test, scaler_y)

@@ -1,10 +1,12 @@
 import pandas as pd
 from prophet import Prophet
 from prophet.diagnostics import cross_validation, performance_metrics
+from prophet.serialize import model_to_json, model_from_json
 import yfinance as yf
 import matplotlib.pyplot as plt
 from sklearn.model_selection import ParameterGrid
 import logging
+import os
 
 # Suppress warnings
 logging.getLogger('prophet').setLevel(logging.WARNING)
@@ -29,14 +31,14 @@ class MProphet:
             columns={"Date": "ds", "Close": "y", "Volume": "volume"}
         )
 
-    def fit_predict(self):
-        """Fits the Prophet model and generates forecasts."""
+    def fit_predict(self, periods=365):  # Add optional periods argument
+        """Fits the Prophet model and generates forecasts for a given number of periods."""
         self.model = Prophet(
             interval_width=0.95,
             **self.hyperparams
         ).add_regressor("volume")
         self.model.fit(self.data)
-        future = self.model.make_future_dataframe(periods=365)
+        future = self.model.make_future_dataframe(periods=periods)
         future["volume"] = self.data["volume"].mean()  # Fill future volume with average
         self.forecast = self.model.predict(future)
 
@@ -83,26 +85,45 @@ class MProphet:
 
         return best_params
 
-    def savemodel(self):
-        pass
+    def save_model(self, filename="prophet_model.json"):
+        with open(filename, "w") as f:
+            f.write(model_to_json(self.model))
+        print(f"Model saved to {filename}")
 
-    def loadmodel(self):
-        pass
+    def load_model(self, filename="prophet_model.json"):
+        if not os.path.exists(filename):
+            raise FileNotFoundError(f"Model file not found: {filename}")
 
+        with open(filename, "r") as f:
+            self.model = model_from_json(f.read())
+        print(f"Model loaded from {filename}")
 
-'''
+"""
 # Test
 param_grid = {
     "changepoint_prior_scale": [0.001, 0.01, 0.1, 0.5],
     "seasonality_prior_scale": [0.01, 0.1, 1.0, 10.0],
 }
 
-best_params = MProphet.tune_hyperparameters("BTC-USD", "2018-05-22", "2024-06-17", param_grid)
+best_params = MProphet.tune_hyperparameters("BTC-USD", "2016-05-22", "2024-06-26", param_grid)
 print("Best hyperparameters:", best_params)
 
-# Use best parameters for final model
-mp_final = MProphet("BTC-USD", "2018-05-22", "2024-06-17", hyperparams=best_params)
+# Use the best parameters for final model
+mp_final = MProphet("BTC-USD", "2016-05-22", "2024-06-26", hyperparams=best_params)
 mp_final.download_data()
 mp_final.fit_predict()
 mp_final.plot()
-mp_final.cross_validate()'''
+mp_final.cross_validate()
+
+mp_final.save_model()
+
+
+mp_loaded = MProphet("BTC-USD", "2016-05-22", "2024-06-26")
+mp_loaded.load_model()
+mp_loaded.download_data()
+future_dates = mp_loaded.model.make_future_dataframe(periods=30)
+future_dates["volume"] = mp_loaded.data["volume"].mean()
+new_forecast = mp_loaded.model.predict(future_dates)
+mp_loaded.plot()
+mp_loaded.cross_validate()
+"""

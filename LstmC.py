@@ -87,7 +87,7 @@ class Lstm:
     def save_model(model, scaler, filename):
         with open(filename, 'wb') as f:
             pickle.dump({'model': model, 'scaler': scaler}, f)
-
+    @staticmethod
     def load_model(filename):
         with open(filename, 'rb') as f:
             data = pickle.load(f)

@@ -82,7 +82,7 @@ def xgbst(X_train, X_test, y_train, y_test, scaler_y):
 
     print("Test RMSE:", rmse_test)
     print("Train RMSE:", rmse_train)
-    return y_test_real, y_pred_real
+    return y_test_real, y_pred_real, model
 
 
 @staticmethod
@@ -98,8 +98,8 @@ def plot(ticker, y_test_real, y_pred_real):
     plt.show()
 
 
-def savemodel():
-    pass
+def savemodel(model):
+    model.save_model("Xgboost_model.json")
 
 
 def loadmodel():
