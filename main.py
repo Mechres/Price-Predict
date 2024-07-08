@@ -43,27 +43,9 @@ def main():
 
     elif selection == "2":
         #Catboost
-        from Kedi import CatboostPredictor
-        print("Catboost Regressor selected.")
-        print("Load saved model? (Must be in same directory.)")
-        selection_c = input("Y/N:    ")
-        if selection_c == "Y":
-            CatboostPredictor.usemodel()
-        elif selection_c == "N":
-            start_Date = input("Start Date (YYYY-MM-DD): ")
-            end_Date = input("End Date (YYYY-MM-DD): ")
-            X_train, X_test, y_train, y_test = CatboostPredictor().yfdown(ticker, start_Date, end_Date)
-            best_params = CatboostPredictor.searchcatboost(X_train=X_train, y_train=y_train)
-            pred = CatboostPredictor.catboost_model(X_train, y_train, X_test, y_test, best_params)
-            CatboostPredictor.plot_catboost(ticker, pred, y_test)
-            savemodel = input("Save model? Y/N  ")
-            if savemodel == "Y":
-                CatboostPredictor.savemodel()
-            else:
-                pass
+        from Kedi import CatBoostPredictor
+        CatBoostPredictor.catboost_prediction(ticker)
 
-        else:
-            print("")
     elif selection == "3":
         #Prophet
         from prop import MProphet

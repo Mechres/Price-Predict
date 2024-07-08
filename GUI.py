@@ -1,7 +1,37 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import numpy as np
 import pickle
+from Kedi import CatBoostPredictor
+
+
+def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
+    predictor = CatBoostPredictor()
+
+    try:
+        if load_var.get():
+            try:
+                predictor.load_model('catboost_model.joblib')
+                messagebox.showinfo("Info", "Model loaded successfully.")
+            except FileNotFoundError:
+                messagebox.showerror("Error", "Model file not found. Please train a new model.")
+                return
+
+            X_train, X_test, y_train, y_test = predictor.yfdown(ticker, start_date, end_date)
+            new_predictions = predictor.predict(X_test)
+            predictor.plot_catboost(ticker, new_predictions, y_test)
+        else:
+            X_train, X_test, y_train, y_test = predictor.yfdown(ticker, start_date, end_date)
+            best_params = predictor.search_catboost(X_train, y_train)
+            pred = predictor.train_model(X_train, y_train, X_test, y_test, best_params)
+            predictor.plot_catboost(ticker, pred, y_test)
+
+            if save_var.get():
+                predictor.save_model('catboost_model.joblib')
+                messagebox.showinfo("Info", "Model saved successfully.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
 
 def run_selected_model(selection, ticker):
@@ -29,16 +59,8 @@ def run_selected_model(selection, ticker):
 
     if selection == "2":
         #Catboost
-        from Kedi import CatboostPredictor
-        if load_var.get():
-            pass
-        else:
-            X_train, X_test, y_train, y_test = CatboostPredictor().yfdown(ticker, start_date, end_date)
-            best_params = CatboostPredictor.searchcatboost(X_train=X_train, y_train=y_train)
-            pred = CatboostPredictor.catboost_model(X_train, y_train, X_test, y_test, best_params)
-            CatboostPredictor.plot_catboost(ticker, pred, y_test)
-            if save_var.get():
-                pass
+        catboost_prediction(ticker, start_date, end_date, load_var, save_var)
+
     if selection == "3":
         #Prophet
         from prop import MProphet
