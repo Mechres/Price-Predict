@@ -1,105 +1,248 @@
 import tensorflow as tf
 from tensorflow.keras.layers import Input, LSTM, Dense, Bidirectional, Dropout
 from tensorflow.keras.models import Model
-from tensorflow.keras.optimizers import Adam
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau
 import yfinance as yf
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import mean_squared_error
-import math
 import numpy as np
 import matplotlib.pyplot as plt
 import ta
 from ta.momentum import RSIIndicator
 import pandas as pd
 import pickle
+from typing import Tuple, Dict, Any
+import logging
+from configs.LstmConfig import Config
+import os
 
-class Lstm:
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
+
+class LSTMPredictor:
     def __init__(self):
-        pass
+        self.model = None
+        self.scaler_x = MinMaxScaler()
+        self.scaler_y = MinMaxScaler()
 
     @staticmethod
-    def yfdown(ticker, start, end):
-        df = yf.download(ticker, start=start, end=end)
-        df = df[['Close']].dropna()
+    def yf_Down(ticker: str, start: str, end: str) -> pd.DataFrame:
+        try:
+            df = yf.download(ticker, start=start, end=end)
+            if df.empty:
+                raise ValueError(f"No data available for {ticker} between {start} and {end}")
+            df = df.dropna()
 
-        # Technical Indicators
-        df['SMA_20'] = df['Close'].rolling(window=20).mean()
-        df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
-        rsi_indicator = RSIIndicator(close=df["Close"], window=14)  # RSI indicator
-        df['RSI'] = rsi_indicator.rsi()
+            # Technical Indicators
+            df['SMA_20'] = df['Close'].rolling(window=Config.SMA_WINDOW).mean()
+            df['EMA_12'] = df['Close'].ewm(span=Config.EMA_WINDOW, adjust=False).mean()
+            rsi_indicator = RSIIndicator(close=df["Close"], window=Config.RSI_WINDOW)
+            df['RSI'] = rsi_indicator.rsi()
 
-        df['Day_of_Week'] = pd.to_datetime(df.index).dayofweek  # 0: Monday, ..., 6: Sunday
+            df['Day_of_Week'] = pd.to_datetime(df.index).dayofweek
 
-        # Shift for Previous Values
-        df['Prev_Close'] = df['Close'].shift(1)
-        df['Prev_SMA_20'] = df['SMA_20'].shift(1)
-        df['Prev_EMA_12'] = df['EMA_12'].shift(1)
-        df['Prev_RSI'] = df['RSI'].shift(1)
+            # Shift for Previous Values
+            for col in ['Close', 'SMA_20', 'EMA_12', 'RSI']:
+                df[f'Prev_{col}'] = df[col].shift(1)
 
-        df = df.dropna()  # Drop rows with NaN values
+            return df.dropna()
+        except Exception as e:
+            logging.error(f"Error downloading stock data: {str(e)}")
+            raise
 
-        # Separate scalers for each column
-        scaler_x = MinMaxScaler()
-        scaler_y = MinMaxScaler()
-        x = scaler_x.fit_transform(df[['Prev_Close', 'Prev_SMA_20', 'Prev_EMA_12', 'Prev_RSI', 'Day_of_Week']])
-        y = scaler_y.fit_transform(df[['Close']])
+    def prepare_data(self, df: pd.DataFrame) -> Tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        try:
+            x = self.scaler_x.fit_transform(df[Config.FEATURE_COLUMNS])
+            y = self.scaler_y.fit_transform(df[[Config.TARGET_COLUMN]])
+            return train_test_split(x, y, test_size=Config.VALIDATION_SPLIT, shuffle=False)
+        except Exception as e:
+            logging.error(f"Error preparing data: {str(e)}")
+            raise
 
-        X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=False)
-        return X_train, X_test, y_train, y_test, scaler_y
+    def build_model(self, input_shape: Tuple[int, int]) -> Model:
+        try:
+            inputs = Input(shape=input_shape)
+            x = inputs
+            for units in Config.LSTM_UNITS:
+                x = Bidirectional(LSTM(units=units, return_sequences=True))(x)
+                x = Dropout(Config.DROPOUT_RATE)(x)
+            x = LSTM(units=Config.LSTM_UNITS[-1])(x)
+            for units in Config.DENSE_UNITS:
+                x = Dense(units, activation='relu')(x)
+            outputs = Dense(1)(x)
+
+            model = Model(inputs=inputs, outputs=outputs)
+            model.compile(optimizer=Config.OPTIMIZER, loss='mse')
+            return model
+        except Exception as e:
+            logging.error(f"Error building model: {str(e)}")
+            raise
+
+    def train_model(self, X_train: np.ndarray, y_train: np.ndarray, X_test: np.ndarray, y_test: np.ndarray) -> None:
+        try:
+            self.model = self.build_model((X_train.shape[1], 1))
+
+            early_stopping = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
+            reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.2, patience=5, min_lr=1e-5)
+
+            history = self.model.fit(
+                X_train, y_train,
+                batch_size=Config.BATCH_SIZE,
+                epochs=Config.EPOCHS,
+                validation_data=(X_test, y_test),
+                callbacks=[early_stopping, reduce_lr],
+                verbose=2
+            )
+            return history
+        except Exception as e:
+            logging.error(f"Error training model: {str(e)}")
+            raise
+
+    def predict(self, X_test: np.ndarray) -> np.ndarray:
+        try:
+            yhat = self.model.predict(X_test, verbose=0)
+            return self.scaler_y.inverse_transform(yhat)
+        except Exception as e:
+            logging.error(f"Error making predictions: {str(e)}")
+            raise
 
     @staticmethod
-    def model(X_train, y_train, X_test, y_test):
-        inputs = Input(shape=(X_train.shape[1], 1))  # Adjust input shape
-        x = Bidirectional(LSTM(units=128, return_sequences=True))(inputs)
-        x = Dropout(0.2)(x)
-        x = LSTM(units=64)(x)
-        x = Dense(32)(x)
-        outputs = Dense(1)(x)
-
-        model = Model(inputs=inputs, outputs=outputs)
-
-        model.compile(optimizer=Adam(learning_rate=0.0001), loss='mse')
-        model.fit(X_train, y_train, batch_size=32, epochs=100, validation_data=(X_test, y_test), verbose=2)
-        return model
+    def evaluate_model(y_true: np.ndarray, y_pred: np.ndarray) -> float:
+        return np.sqrt(mean_squared_error(y_true, y_pred))
 
     @staticmethod
-    def yhat(ticker, model, X_test, y_test, scaler):
-        yhat = model.predict(X_test, verbose=0)
+    def plot_results(y_true: np.ndarray, y_pred: np.ndarray, ticker: str) -> None:
+        try:
+            plt.figure(figsize=(12, 6))
+            plt.plot(y_true, label='Actual Price')
+            plt.plot(y_pred, label='Predicted Price')
+            plt.title(f'{ticker} Price Prediction - LSTM Model')
+            plt.xlabel('Time')
+            plt.ylabel('Price')
+            plt.legend()
+            plt.show()
+            plt.savefig(os.path.join(os.getenv('PLOT_DIR', '.'), f'{ticker}_prediction_plot.png'))
+        except Exception as e:
+            logging.error(f"Error plotting results: {str(e)}")
+            raise
 
-        y_test = scaler.inverse_transform(y_test)  # Use scaler_y
-        yhat = scaler.inverse_transform(yhat)
+    def save_model(self, filename: str) -> None:
+        try:
+            with open(filename, 'wb') as f:
+                pickle.dump({'model': self.model, 'scaler_x': self.scaler_x, 'scaler_y': self.scaler_y}, f)
+            logging.info(f"Model saved to {filename}")
+        except Exception as e:
+            logging.error(f"Error saving model: {str(e)}")
+            raise
 
-        rmse = math.sqrt(mean_squared_error(y_test, yhat))
+    @classmethod
+    def load_model(cls, filename: str) -> 'LSTMPredictor':
+        try:
+            with open(filename, 'rb') as f:
+                data = pickle.load(f)
 
-        # Plot
-        plt.figure(figsize=(12, 6))
-        plt.plot(y_test, label='Actual Price')
-        plt.plot(yhat, label='Predicted Price')
-        plt.title(ticker + ' Price Prediction - LSTM Model')
-        plt.xlabel('Time')
-        plt.ylabel('Price')
-        plt.legend()
-        plt.show()
+            predictor = cls()
+            predictor.model = data['model']
+            predictor.scaler_x = data['scaler_x']
+            predictor.scaler_y = data['scaler_y']
+            logging.info(f"Model loaded from {filename}")
+            return predictor
+        except Exception as e:
+            logging.error(f"Error loading model: {str(e)}")
+            raise
 
-        return rmse
-
-    def save_model(model, scaler, filename):
-        with open(filename, 'wb') as f:
-            pickle.dump({'model': model, 'scaler': scaler}, f)
     @staticmethod
-    def load_model(filename):
-        with open(filename, 'rb') as f:
-            data = pickle.load(f)
-            return data['model'], data['scaler']
+    def run(ticker: str) -> None:
+        print("LSTM selected.")
+        predictor = LSTMPredictor()
+
+        print("Load saved model? (Must be in same directory.)")
+        selection_c = input("Y/N: ").upper()
+
+        try:
+            if selection_c == "Y":
+                predictor = LSTMPredictor.load_model(Config.MODEL_SAVE_PATH)
+                logging.info("Model loaded successfully.")
+                Config.START_DATE = input("Start Date (YYYY-MM-DD): ")
+                Config.END_DATE = input("End Date (YYYY-MM-DD): ")
+                Config.TICKER = ticker
+                df = predictor.yf_Down(Config.TICKER, Config.START_DATE, Config.END_DATE)
+                X_train, X_test, y_train, y_test = predictor.prepare_data(df)
+                X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+                X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+                y_pred = predictor.predict(X_test)
+                y_true = predictor.scaler_y.inverse_transform(y_test)
+                rmse = predictor.evaluate_model(y_true, y_pred)
+                logging.info(f'RMSE: {rmse}')
+                predictor.plot_results(y_true, y_pred, Config.TICKER)
+
+            elif selection_c == "N":
+                Config.START_DATE = input("Start Date (YYYY-MM-DD): ")
+                Config.END_DATE = input("End Date (YYYY-MM-DD): ")
+                Config.TICKER = ticker
+
+                # Download and prepare data
+                df = predictor.yf_Down(Config.TICKER, Config.START_DATE, Config.END_DATE)
+                X_train, X_test, y_train, y_test = predictor.prepare_data(df)
+
+                # Reshape data for LSTM input
+                X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+                X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+                # Train model
+                history = predictor.train_model(X_train, y_train, X_test, y_test)
+
+                # Make predictions
+                y_pred = predictor.predict(X_test)
+                y_true = predictor.scaler_y.inverse_transform(y_test)
+
+                # Evaluate model
+                rmse = predictor.evaluate_model(y_true, y_pred)
+                logging.info(f'RMSE: {rmse}')
+
+                # Plot results
+                predictor.plot_results(y_true, y_pred, Config.TICKER)
+
+                # Ask to save model
+                save_model = input("Save model? Y/N: ").upper()
+                if save_model == "Y":
+                    predictor.save_model(Config.MODEL_SAVE_PATH)
+                    logging.info("Model saved successfully.")
+            else:
+                logging.warning("Invalid selection. Please choose Y or N.")
+
+        except Exception as e:
+            logging.error(f"An error occurred: {str(e)}")
+            print("An error occurred. Please check the logs for more information.")
 
 
-''''' Test
-lstm = Lstm()
-X_train, X_test, y_train, y_test, scaler = lstm.yfdown('BTC-USD', '2020-05-24', '2024-06-02')
-X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
-X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-model = lstm.model(X_train, y_train, X_test, y_test)
-rmse = lstm.yhat(model, X_test, y_test, scaler)
-print(f'RMSE: {rmse}')
-'''''
+"""
+# Test
+if __name__ == "__main__":
+    try:
+        predictor = LSTMPredictor()
+
+        # Download and prepare data
+        df = predictor.download_stock_data(Config.TICKER, Config.START_DATE, Config.END_DATE)
+        X_train, X_test, y_train, y_test = predictor.prepare_data(df)
+
+        # Train model
+        history = predictor.train_model(X_train, y_train, X_test, y_test)
+
+        # Make predictions
+        y_pred = predictor.predict(X_test)
+        y_true = predictor.scaler_y.inverse_transform(y_test)
+
+        # Evaluate and plot results
+        rmse = predictor.evaluate_model(y_true, y_pred)
+        logging.info(f"RMSE: {rmse}")
+        predictor.plot_results(y_true, y_pred, Config.TICKER)
+
+        # Save model
+        predictor.save_model(Config.MODEL_SAVE_PATH)
+
+        # Load model
+        loaded_predictor = LSTMPredictor.load_model(Config.MODEL_SAVE_PATH)
+    except Exception as e:
+        logging.error(f"An error occurred in the main execution: {str(e)}")"""

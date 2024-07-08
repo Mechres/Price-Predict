@@ -19,7 +19,7 @@ logger = logging.getLogger(__name__)
 
 
 class CatBoostPredictor:
-    def __init__(self, config_path: str = 'catboostconfig.yaml'):
+    def __init__(self, config_path: str = 'configs/catboostconfig.yaml'):
         self.model = None
         self.config = self.load_config(config_path)
 

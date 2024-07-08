@@ -5,6 +5,7 @@ import pickle
 from Kedi import CatBoostPredictor
 
 
+
 def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
     predictor = CatBoostPredictor()
 
@@ -34,28 +35,56 @@ def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
 
+def lstm_prediction(ticker, start_date, end_date, load_var, save_var):
+    from LstmC import LSTMPredictor
+    from configs.LstmConfig import Config
+    try:
+        if load_var.get():
+            try:
+                predictor = LSTMPredictor.load_model(Config.MODEL_SAVE_PATH)
+                messagebox.showinfo("Info", "Model loaded successfully.")
+            except FileNotFoundError:
+                messagebox.showerror("Error", "Model file not found. Please train a new model.")
+                return
+
+            df = predictor.yf_Down(ticker, start_date, end_date)
+            X_train, X_test, y_train, y_test = predictor.prepare_data(df)
+            X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+            X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+            y_pred = predictor.predict(X_test)
+            y_true = predictor.scaler_y.inverse_transform(y_test)
+            rmse = predictor.evaluate_model(y_true, y_pred)
+            messagebox.showinfo("RMSE", f'RMSE: {rmse}')
+            predictor.plot_results(y_true, y_pred, ticker)
+        else:
+            predictor = LSTMPredictor()
+            Config.TICKER = ticker
+            df = predictor.yf_Down(Config.TICKER, Config.START_DATE, Config.END_DATE)
+            X_train, X_test, y_train, y_test = predictor.prepare_data(df)
+            X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+            X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+            history = predictor.train_model(X_train, y_train, X_test, y_test)
+            y_pred = predictor.predict(X_test)
+            y_true = predictor.scaler_y.inverse_transform(y_test)
+            rmse = predictor.evaluate_model(y_true, y_pred)
+            messagebox.showinfo("RMSE", f'RMSE: {rmse}')
+            predictor.plot_results(y_true, y_pred, Config.TICKER)
+
+            if save_var.get():
+                predictor.save_model(Config.MODEL_SAVE_PATH)
+                messagebox.showinfo("Saved!", "Model saved successfully.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+
 def run_selected_model(selection, ticker):
     start_date = start_date_entry.get()
     end_date = end_date_entry.get()
 
     if selection == "1":
         # LSTM
-        from LstmC import Lstm
-        model_path = "lstm_model.pkl"
-        if load_var.get():
-            model, scaler = Lstm.load_model(model_path)
-            print("Model loaded")
-            #Add use model.
-        else:
-            X_train, X_test, y_train, y_test, scaler = Lstm.yfdown(ticker, start_date, end_date)
-            X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
-            X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-            model = Lstm.model(X_train, y_train, X_test, y_test)
-            rmse = Lstm.yhat(ticker, model, X_test, y_test, scaler)
-            print(f'RMSE: {rmse}')
-            if save_var.get():
-                Lstm.save_model(model, scaler, model_path)
-                print("Model saved.")
+        lstm_prediction(ticker, start_date, end_date, load_var, save_var)
 
     if selection == "2":
         #Catboost

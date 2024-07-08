@@ -1,16 +1,19 @@
 # Crypto & Stock Price Prediction with Various Neural Networks
 Crypto & Stock Price Prediction and Forecasting Toolkit.
 
-Main.py file let's you select model, start & end date, available models are: Lstm, Catboost, Prophet, XGBoost and LGBM.
+Main.py & GUI.py files let's you select model, start & end date, available models are: Lstm, Catboost, Prophet, XGBoost and LGBM.
 
 
 ### Latest Update:
-Save & Load works with Prophet.
+Updated Lstm, added config file.
 
-Save works for Lstm and Xgboost.
+Config files moved to a folder.
 
-DemoGui is now just gui since main file and gui is identical feature wise.
+Model save now saves to models folder.
 
+Old Jupyter notebook's deleted.
+
+Catboost - Save & Load added
 
 ### Dependencies:
 

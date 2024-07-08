@@ -1,8 +1,7 @@
 import numpy as np
-
+import logging
 
 #Add Ticker selection
-#Add GUI
 #Load&Save
 #Yfdown should be here and used once.
 def main():
@@ -16,30 +15,10 @@ def main():
     selection = input("Select Model:    ")
 
     if selection == "1":
-        #LSTM
-        from LstmC import Lstm
-        model_path = "lstm_model.pkl"
-        print("LSTM selected.")
-        print("Load saved model? (Must be in same directory.)")
-        selection_c = input("Y/N:    ")
-        if selection_c == "Y":
-            #model, scaler = Lstm.load_model(model_path)
-            pass
-        elif selection_c == "N":
-            start_Date = input("Start Date (YYYY-MM-DD): ")
-            end_Date = input("End Date (YYYY-MM-DD): ")
-            X_train, X_test, y_train, y_test, scaler = Lstm.yfdown(ticker, start_Date, end_Date)
-            X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
-            X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-            model = Lstm.model(X_train, y_train, X_test, y_test)
-            rmse = Lstm.yhat(ticker, model, X_test, y_test, scaler)
-            print(f'RMSE: {rmse}')
-            savemodel = input("Save model? Y/N  ")
-            if savemodel == "Y":
-                Lstm.save_model(model, scaler, model_path)
-                print("Model saved.")
-            else:
-                pass
+        # LSTM
+        from LstmC import LSTMPredictor
+        LSTMPredictor.run(ticker)
+
 
     elif selection == "2":
         #Catboost
