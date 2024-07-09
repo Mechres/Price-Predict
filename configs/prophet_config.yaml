@@ -1,0 +1,26 @@
+cv_horizon: 365 days
+cv_initial: 730 days
+cv_period: 180 days
+end_date: '2024-07-09'
+forecast_periods: 365
+hyperparameters:
+  changepoint_prior_scale: 0.05
+  daily_seasonality: auto
+  holidays_prior_scale: 10.0
+  seasonality_prior_scale: 0.1
+log_level: INFO
+model_save_path: models/prophet_model.json
+param_grid:
+  changepoint_prior_scale:
+  - 0.001
+  - 0.01
+  - 0.1
+  - 0.5
+  seasonality_prior_scale:
+  - 0.01
+  - 0.1
+  - 1.0
+  - 10.0
+plot_save_dir: plots
+start_date: '2015-05-22'
+ticker: BTC-USD

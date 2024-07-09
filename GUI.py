@@ -5,7 +5,6 @@ import pickle
 from Kedi import CatBoostPredictor
 
 
-
 def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
     predictor = CatBoostPredictor()
 
@@ -77,6 +76,64 @@ def lstm_prediction(ticker, start_date, end_date, load_var, save_var):
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
+def MetaProphet(ticker, start_date, end_date, load_var, save_var):
+    # Prophet
+    from prop import MProphet
+    import yaml
+    try:
+        # Load the config file
+        config_path = 'configs/prophet_config.yaml'
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+    except Exception as e:
+        messagebox.showerror("Error", "Config file not found.")
+
+    try:
+
+        if load_var.get():
+            try:
+                # Update config with user input
+                config['start_date'] = start_date
+                config['end_date'] = end_date
+                config['ticker'] = ticker
+                # Save updated config
+                with open(config_path, 'w') as file:
+                    yaml.dump(config, file)
+                mp_loaded = MProphet(config_path)
+                mp_loaded.load_model()
+                messagebox.showinfo("Info", "Model loaded successfully.")
+            except FileNotFoundError:
+                messagebox.showerror("Error", "Model file not found. Please train a new model.")
+                return
+            mp_loaded.download_data()
+            mp_loaded.fit_predict()
+            mp_loaded.plot()
+            messagebox.showinfo("Info", "Plots saved to '/plots' directory.")
+
+        else:
+            # Update config with user input
+            config['start_date'] = start_date
+            config['end_date'] = end_date
+            config['ticker'] = ticker
+            # Save updated config
+            with open(config_path, 'w') as file:
+                yaml.dump(config, file)
+            best_params = MProphet.tune_hyperparameters(config_path)
+            print("Best hyperparameters:", best_params)
+            mp_final = MProphet(config_path)
+            mp_final.hyperparams = best_params
+            results = mp_final.run()
+            print(f"Final RMSE: {results['rmse']}")
+            messagebox.showinfo("Info", "Plots saved to '/plots' directory.")
+
+            if save_var.get():
+                mp_final.save_model()
+                messagebox.showinfo("Info", "Model saved successfully.")
+            else:
+                pass
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
 
 def run_selected_model(selection, ticker):
     start_date = start_date_entry.get()
@@ -92,31 +149,8 @@ def run_selected_model(selection, ticker):
 
     if selection == "3":
         #Prophet
-        from prop import MProphet
-        if load_var.get():
-            mp_loaded = MProphet(ticker, start_date, end_date)
-            mp_loaded.load_model()
-            mp_loaded.download_data()
-            mp_loaded.fit_predict(periods=30)  # forecast for 30 days
-            mp_loaded.plot()
-            mp_loaded.cross_validate()
-            pass
-        else:
-            param_grid = {
-                "changepoint_prior_scale": [0.001, 0.01, 0.1, 0.5],
-                "seasonality_prior_scale": [0.01, 0.1, 1.0, 10.0],
-            }
+        MetaProphet(ticker, start_date, end_date, load_var, save_var)
 
-            best_params = MProphet.tune_hyperparameters(ticker, start_date, end_date, param_grid)
-            print("Best hyperparameters:", best_params)
-
-            mp_final = MProphet(ticker, start_date, end_date, hyperparams=best_params)
-            mp_final.download_data()
-            mp_final.fit_predict()
-            mp_final.plot()
-            mp_final.cross_validate()
-            if save_var.get():
-                mp_final.save_model()
     if selection == "4":
         #XGBoost
         import xg

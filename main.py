@@ -26,30 +26,53 @@ def main():
         CatBoostPredictor.catboost_prediction(ticker)
 
     elif selection == "3":
-        #Prophet
+        # Prophet
         from prop import MProphet
+        import yaml
         print("Prophet selected.")
+        # Load the config file
+        config_path = 'configs/prophet_config.yaml'
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+
         print("Load saved model? (Must be in same directory.)")
-        selection_c = input("Y/N:    ")
+        selection_c = input("Y/N: ").upper()
         if selection_c == "Y":
-            #MProphet.savemodel()
-            pass
+            # Update config with user input
+            config['start_date'] = input("Start Date (YYYY-MM-DD): ")
+            config['end_date'] = input("End Date (YYYY-MM-DD): ")
+            config['ticker'] = ticker
+            # Save updated config
+            with open(config_path, 'w') as file:
+                yaml.dump(config, file)
+            mp_loaded = MProphet(config_path)
+            mp_loaded.load_model()
+            mp_loaded.download_data()
+            mp_loaded.fit_predict()
+            mp_loaded.plot()
+
+
         elif selection_c == "N":
-            start_Date = input("Start Date (YYYY-MM-DD): ")
-            end_Date = input("End Date (YYYY-MM-DD): ")
-            param_grid = {
-                "changepoint_prior_scale": [0.001, 0.01, 0.1, 0.5],
-                "seasonality_prior_scale": [0.01, 0.1, 1.0, 10.0],
-            }
-
-            best_params = MProphet.tune_hyperparameters(ticker, start_Date, end_Date, param_grid)
+            # Update config with user input
+            config['start_date'] = input("Start Date (YYYY-MM-DD): ")
+            config['end_date'] = input("End Date (YYYY-MM-DD): ")
+            config['ticker'] = ticker
+            # Save updated config
+            with open(config_path, 'w') as file:
+                yaml.dump(config, file)
+            best_params = MProphet.tune_hyperparameters(config_path)
             print("Best hyperparameters:", best_params)
+            mp_final = MProphet(config_path)
+            mp_final.hyperparams = best_params
+            results = mp_final.run()
+            print(f"Final RMSE: {results['rmse']}")
 
-            mp_final = MProphet(ticker, start_Date, end_Date, hyperparams=best_params)
-            mp_final.download_data()
-            mp_final.fit_predict()
-            mp_final.plot()
-            mp_final.cross_validate()
+            savemodel = input("Save model? Y/N: ").upper()
+            if savemodel == "Y":
+                mp_final.save_model()
+                print("Model saved.")
+            else:
+                pass
 
     elif selection == "4":
         #XGBoost
