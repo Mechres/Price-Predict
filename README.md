@@ -4,23 +4,27 @@ Crypto & Stock Price Prediction and Forecasting Toolkit.
 Main.py & GUI.py files let's you select model, start & end date, available models are: Lstm, Catboost, Prophet, XGBoost and LGBM.
 
 
-### Latest Update:
-Updated Lstm, added config file.
-
-Config files moved to a folder.
-
-Model save now saves to models folder.
-
-Old Jupyter notebook's deleted.
-
-Catboost - Save & Load added
-
+### Update Log:
+```
+→ 09.07.2024
+Prophet Update
+- Save & load works
+- Multiprocessing added
+- Config file added
+- Plots now save to plots directory
+04.07.2024 →→→ 08.07.2024
+- Updated Lstm, added config file.
+- Config files moved to a folder.
+- Model save now saves to models folder.
+- Old Jupyter notebook's deleted.
+- Catboost - Save & Load added
+```
 ### Dependencies:
 
 ```
-pip install tensorflow yfinance ta scikit-learn pandas numpy matplotlib catboost prophet lightgbm tkinter pickle 
+pip install tensorflow yfinance ta scikit-learn pandas numpy matplotlib catboost prophet lightgbm tkinter pickle PyYAML
 ```
-in case of an update breaks something:
+In case of an update breaks something:
 - tensorflow = 2.16.1
 - keras = 3.3.3
 - prophet = 1.1.5
@@ -45,9 +49,9 @@ XGBoost is an optimized distributed gradient boosting library designed to be hig
 ## LightGBM
 LightGBM is a gradient boosting framework that uses tree based learning algorithms
 
-## - Planned Features:
-- Graphical User Interface (GUI)
-- Save & Load
+## Planned Features:
+-  ~~Graphical User Interface (GUI)~~
+-  ~~Save & Load~~
 - Random Forest Regressor
 - Gradient Boosting Regressor
 
@@ -56,12 +60,12 @@ LightGBM is a gradient boosting framework that uses tree based learning algorith
 - At current level models made with this "tool" is not usable for crpyto market but feel free to modify, use, experiment on it.
 - Experimental Project: This is a side project for educational purposes and should not be used as the sole basis for investment decisions.
 
-## Old Files(For Reference):
-These files provide basic implementations of the models, which you can reference for understanding the underlying algorithms and principles:
+##  ~~Old Files(For Reference):~~
+ ~~These files provide basic implementations of the models, which you can reference for understanding the underlying algorithms and principles:~~
 
-- Keras-LSTM.ipynb: Illustrates the fundamentals of LSTM models in Keras.
-- CatBoostRegressor.ipynb: Shows a simple CatBoostRegressor example with grid search.
-- Prophet.ipynb: Demonstrates the basic usage of Facebook's Prophet library.
+- ~~Keras-LSTM.ipynb: Illustrates the fundamentals of LSTM models in Keras.~~
+- ~~CatBoostRegressor.ipynb: Shows a simple CatBoostRegressor example with grid search.~~
+- ~~Prophet.ipynb: Demonstrates the basic usage of Facebook's Prophet library.~~
 
 
 ## Screenshots
