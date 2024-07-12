@@ -2,112 +2,193 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import xgboost as xgb
-from sklearn.model_selection import GridSearchCV, TimeSeriesSplit
-import ta
-from ta.momentum import RSIIndicator
-import yfinance as yf
+from sklearn.model_selection import TimeSeriesSplit
 from sklearn.preprocessing import MinMaxScaler
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
+import yfinance as yf
+import ta
+from bayes_opt import BayesianOptimization
+import yaml
+import os
 
 
-@staticmethod
-def yfdown(ticker, start, end):
-    df = yf.download(ticker, start=start, end=end)
-    df = df.dropna()
+class XGBoost_Predictor:
+    def __init__(self, config_path):
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
 
-    # Technical Indicators
-    df['SMA_20'] = df['Close'].rolling(window=20).mean()
-    df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
-    rsi_indicator = RSIIndicator(close=df["Close"], window=14)  # RSI indicator
-    df['RSI'] = rsi_indicator.rsi()
+        self.ticker = self.config['ticker']
+        self.start_date = self.config['start_date']
+        self.end_date = self.config['end_date']
+        self.test_size = self.config['test_size']
+        self.plot_dir = self.config['plot_dir']
+        self.hyperparameter_tuning = self.config['hyperparameter_tuning']
+        self.scaler_y = MinMaxScaler()
 
-    df['Day_of_Week'] = pd.to_datetime(df.index).dayofweek
+        if not os.path.exists(self.plot_dir):
+            os.makedirs(self.plot_dir)
 
-    # Shift for Previous Values
-    df['Prev_Close'] = df['Close'].shift(1)
-    df['Prev_SMA_20'] = df['SMA_20'].shift(1)
-    df['Prev_EMA_12'] = df['EMA_12'].shift(1)
-    df['Prev_RSI'] = df['RSI'].shift(1)
+        self.model = None
 
-    df = df.dropna()  # Drop NaN
+    def download_data(self):
+        df = yf.download(self.ticker, start=self.start_date, end=self.end_date)
+        df = df.dropna()
 
-    df['Day_of_Week'] = pd.to_datetime(df.index).dayofweek
-    print(df)
-    # Separate scalers for each column
-    scaler_x = MinMaxScaler()
-    scaler_y = MinMaxScaler()
-    x = scaler_x.fit_transform(df[['Prev_Close', 'Prev_SMA_20', 'Prev_EMA_12', 'Prev_RSI', 'Day_of_Week', 'Volume']])
-    y = scaler_y.fit_transform(df[['Close']])
+        # Technical Indicators
+        df['SMA_20'] = df['Close'].rolling(window=20).mean()
+        df['EMA_12'] = df['Close'].ewm(span=12, adjust=False).mean()
+        df['RSI'] = ta.momentum.RSIIndicator(close=df["Close"], window=14).rsi()
+        df['MACD'] = ta.trend.MACD(close=df["Close"]).macd()
+        df['BB_upper'], df['BB_middle'], df['BB_lower'] = ta.volatility.BollingerBands(
+            close=df["Close"]).bollinger_hband(), ta.volatility.BollingerBands(
+            close=df["Close"]).bollinger_mavg(), ta.volatility.BollingerBands(close=df["Close"]).bollinger_lband()
+        df['OBV'] = ta.volume.OnBalanceVolumeIndicator(close=df["Close"], volume=df["Volume"]).on_balance_volume()
 
-    X_train, X_test, y_train, y_test = train_test_split(x, y, test_size=0.2, shuffle=False)
-    return X_train, X_test, y_train, y_test, scaler_y
+        df['Day_of_Week'] = pd.to_datetime(df.index).dayofweek
+        df['Month'] = pd.to_datetime(df.index).month
+
+        # Shift for Previous Values
+        for col in ['Close', 'SMA_20', 'EMA_12', 'RSI', 'MACD', 'BB_upper', 'BB_lower', 'OBV']:
+            df[f'Prev_{col}'] = df[col].shift(1)
+
+        df = df.dropna()
+
+        return df
+
+    def prepare_data(self, df):
+        feature_columns = ['Prev_Close', 'Prev_SMA_20', 'Prev_EMA_12', 'Prev_RSI', 'Prev_MACD',
+                           'Prev_BB_upper', 'Prev_BB_lower', 'Prev_OBV', 'Day_of_Week', 'Month', 'Volume']
+
+        # Use TimeSeriesSplit for data splitting and get the last split for training and testing
+        tscv = TimeSeriesSplit(n_splits=5)
+        for train_index, test_index in tscv.split(df):
+            pass  # Iterate until the last split
+
+        # Fit and transform scaler for the final split
+        scaler_x = MinMaxScaler()
+        X_train = scaler_x.fit_transform(df[feature_columns].iloc[train_index])
+        X_test = scaler_x.transform(df[feature_columns].iloc[test_index])
+
+        self.scaler_y.fit(df[['Close']].iloc[train_index])  # Fit the scaler to the last split
+        y_train = self.scaler_y.transform(df[['Close']].iloc[train_index])
+        y_test = self.scaler_y.transform(df[['Close']].iloc[test_index])
+
+        return X_train, X_test, y_train, y_test
+
+    def optimize_xgb(self, X_train, y_train):
+        def xgb_evaluate(max_depth, n_estimators, learning_rate, subsample, colsample_bytree):
+            params = {
+                'max_depth': int(max_depth),
+                'n_estimators': int(n_estimators),
+                'learning_rate': learning_rate,
+                'subsample': subsample,
+                'colsample_bytree': colsample_bytree,
+            }
+
+            model = xgb.XGBRegressor(**params)
+            tscv = TimeSeriesSplit(n_splits=5)
+
+            scores = []
+            for train_index, val_index in tscv.split(X_train):
+                X_train_split, X_val_split = X_train[train_index], X_train[val_index]
+                y_train_split, y_val_split = y_train[train_index], y_train[val_index]
+
+                model.fit(X_train_split, y_train_split)
+                predictions = model.predict(X_val_split)
+                mse = mean_squared_error(y_val_split, predictions)
+                scores.append(-mse)  # Negative MSE for maximization
+
+            return np.mean(scores)
+
+        optimizer = BayesianOptimization(
+            f=xgb_evaluate,
+            pbounds={
+                'max_depth': (
+                self.hyperparameter_tuning['max_depth']['min'], self.hyperparameter_tuning['max_depth']['max']),
+                'n_estimators': (
+                self.hyperparameter_tuning['n_estimators']['min'], self.hyperparameter_tuning['n_estimators']['max']),
+                'learning_rate': (
+                self.hyperparameter_tuning['learning_rate']['min'], self.hyperparameter_tuning['learning_rate']['max']),
+                'subsample': (
+                self.hyperparameter_tuning['subsample']['min'], self.hyperparameter_tuning['subsample']['max']),
+                'colsample_bytree': (self.hyperparameter_tuning['colsample_bytree']['min'],
+                                     self.hyperparameter_tuning['colsample_bytree']['max'])
+            },
+            random_state=42
+        )
+
+        optimizer.maximize(n_iter=self.hyperparameter_tuning['n_iter'])
+
+        return optimizer.max['params']
+
+    def train_model(self, X_train, y_train, params):
+
+        params['max_depth'] = int(params['max_depth'])
+        params['n_estimators'] = int(params['n_estimators'])
+        params['learning_rate'] = float(params['learning_rate'])
+        params['subsample'] = float(params['subsample'])
+        params['colsample_bytree'] = float(params['colsample_bytree'])
+
+        self.model = xgb.XGBRegressor(**params)
+        self.model.fit(X_train, y_train)
+
+    def predict(self, X):
+        return self.model.predict(X)
+
+    def evaluate(self, y_true, y_pred):
+        y_true_real = self.scaler_y.inverse_transform(y_true)
+        y_pred_real = self.scaler_y.inverse_transform(y_pred.reshape(-1, 1))
+
+        mse = mean_squared_error(y_true_real, y_pred_real)
+        rmse = np.sqrt(mse)
+
+        return rmse, y_true_real, y_pred_real
 
 
-@staticmethod
-def xgbst(X_train, X_test, y_train, y_test, scaler_y):
-    tscv = TimeSeriesSplit(n_splits=5)
-    xgb_model = xgb.XGBRegressor(tree_method="hist")  # Change to 'hist' for efficiency
-    param_grid = {
-        "max_depth": [3, 5, 7],
-        "n_estimators": [100, 200, 300],
-        "learning_rate": [0.01, 0.1],
-        "subsample": [0.8, 1.0],
-        "colsample_bytree": [0.8, 1.0],
-    }
-    clf = GridSearchCV(xgb_model, param_grid, scoring="neg_mean_squared_error", cv=tscv, n_jobs=-1)
-    clf.fit(X_train, y_train)
-    print("Best Parameters:", clf.best_params_)
-    print("Best MSE:", -clf.best_score_)
+    def plot_results(self, y_true, y_pred):
+        plt.figure(figsize=(12, 6))
+        plt.plot(y_true, label="Actual Price", color="blue")
+        plt.plot(y_pred, label="Predicted Price", color="red")
+        plt.title(f"{self.ticker} Actual vs. Predicted Prices - XGBoost Model")
+        plt.xlabel("Date")
+        plt.ylabel("Price")
+        plt.legend()
+        plt.savefig(os.path.join(self.plot_dir, f"{self.ticker}_prediction.png"))
+        plt.close()
 
-    # Model training and evaluation
-    model = xgb.XGBRegressor(**clf.best_params_)
-    model.fit(X_train, y_train)
+    def save_model(self, filename):
+        self.model.save_model(filename)
 
-    # Predictions and metrics
-    y_pred = model.predict(X_test)
-    y_pred_train = model.predict(X_train)  # Predictions on training set
+    def load_model(self, filename):
+        self.model = xgb.XGBRegressor()
+        self.model.load_model(filename)
 
-    # Inverse transform for accurate metrics
-    y_test_real = scaler_y.inverse_transform(y_test)
-    y_pred_real = scaler_y.inverse_transform(y_pred.reshape(-1, 1))
+    def run(self):
+        df = self.download_data()
+        scaler_x = MinMaxScaler()
+        scaler_y = MinMaxScaler()
 
-    mse_test = mean_squared_error(y_test_real, y_pred_real)
-    rmse_test = np.sqrt(mse_test)
+        # Prepare data using the scalers
+        X_train, X_test, y_train, y_test = self.prepare_data(df)
 
-    y_train_real = scaler_y.inverse_transform(y_train)
-    y_pred_train_real = scaler_y.inverse_transform(y_pred_train.reshape(-1, 1))
-    mse_train = mean_squared_error(y_train_real, y_pred_train_real)
-    rmse_train = np.sqrt(mse_train)
+        # Now use scaler_y in evaluate
+        best_params = self.optimize_xgb(X_train, y_train)
+        print("Best Parameters:", best_params)
 
-    print("Test RMSE:", rmse_test)
-    print("Train RMSE:", rmse_train)
-    return y_test_real, y_pred_real, model
+        self.train_model(X_train, y_train, best_params)
 
+        y_pred_train = self.predict(X_train)
+        y_pred_test = self.predict(X_test)
 
-@staticmethod
-def plot(ticker, y_test_real, y_pred_real):
-    # Plot actual vs. predicted prices
-    plt.figure(figsize=(12, 6))
-    plt.plot(y_test_real, label="Actual Price", color="blue")
-    plt.plot(y_pred_real, label="Predicted Price", color="red")
-    plt.title(ticker + " Actual vs. Predicted Prices - XGBoost Model")
-    plt.xlabel("Date")
-    plt.ylabel("Price")
-    plt.legend()
-    plt.show()
+        train_rmse, y_train_real, y_pred_train_real = self.evaluate(y_train, y_pred_train)
+        test_rmse, y_test_real, y_pred_test_real = self.evaluate(y_test, y_pred_test)
 
+        print("Train RMSE:", train_rmse)
+        print("Test RMSE:", test_rmse)
 
-def savemodel(model):
-    model.save_model("Xgboost_model.json")
+        self.plot_results(y_test_real, y_pred_test_real)
+        self.save_model("models/xgboost_model.json")
 
-
-def loadmodel():
-    pass
-
-
-'''
-#Test
-X_train, X_test, y_train, y_test, scaler_y = yfdown('BTC-USD', '2018-05-22', '2024-06-20')
-y_test_real, y_pred_real = xgbst(X_train, X_test, y_train, y_test, scaler_y)
-plot(y_test_real, y_pred_real)'''
+if __name__ == "__main__":
+    predictor = XGBoost_Predictor("configs/xgboost_config.yaml")
+    predictor.run()

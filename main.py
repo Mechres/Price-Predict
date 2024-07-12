@@ -1,9 +1,6 @@
 import numpy as np
 import logging
 
-#Add Ticker selection
-#Load&Save
-#Yfdown should be here and used once.
 def main():
     ticker = 'BTC-USD'
 
@@ -35,7 +32,7 @@ def main():
         with open(config_path, 'r') as file:
             config = yaml.safe_load(file)
 
-        print("Load saved model? (Must be in same directory.)")
+        print("Load saved model? (Must be in models folder.)")
         selection_c = input("Y/N: ").upper()
         if selection_c == "Y":
             # Update config with user input
@@ -76,25 +73,77 @@ def main():
 
     elif selection == "4":
         #XGBoost
-        import xg
-        print("XgboostRegressor selected.")
-        print("Load saved model? (Must be in same directory.)")
-        selection_c = input("Y/N:    ")
-        if selection_c == "Y":
-            xg.loadmodel()
-        elif selection_c == "N":
-            start_Date = input("Start Date (YYYY-MM-DD): ")
-            end_Date = input("End Date (YYYY-MM-DD): ")
-            X_train, X_test, y_train, y_test, scaler_y = xg.yfdown(ticker, start_Date, end_Date)
-            y_test_real, y_pred_real, model = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
-            xg.plot(ticker, y_test_real, y_pred_real)
+        from xg import XGBoost_Predictor
+        import yaml
 
-            savemodel = input("Save model? Y/N  ")
-            if savemodel == "Y":
-                xg.savemodel(model)
-                print("Model saved.")
-            else:
-                pass
+        config_path = "configs/Xgboost_config.yaml"
+
+        try:
+            with open(config_path, 'r') as file:
+                config = yaml.safe_load(file)
+        except FileNotFoundError:
+            config = {
+                "ticker": ticker,
+                "start_date": "",
+                "end_date": "",
+                "test_size": 0.2,
+                "plot_dir": "plots",
+                "hyperparameter_tuning": {
+                    "max_depth": {"min": 3, "max": 10},
+                    "n_estimators": {"min": 100, "max": 500},
+                    "learning_rate": {"min": 0.01, "max": 0.3},
+                    "subsample": {"min": 0.8, "max": 1.0},
+                    "colsample_bytree": {"min": 0.8, "max": 1.0},
+                    "n_iter": 20
+                }
+            }
+        print("XgboostRegressor selected.")
+        print("Load saved model? (Must be in models folder.)")
+        selection_c = input("Y/N: ").upper()
+
+        if selection_c == "Y":
+            model_path = "models/xgboost_model.json"
+            predictor = XGBoost_Predictor(config_path)
+            predictor.load_model(model_path)
+            print("Model loaded successfully.")
+
+            config['start_date'] = input("Start Date (YYYY-MM-DD): ")
+            config['end_date'] = input("End Date (YYYY-MM-DD): ")
+            config['ticker'] = ticker
+
+            # Use loaded model for prediction
+            df = predictor.download_data()
+            X_test, _, _, _ = predictor.prepare_data(df)
+
+            y_pred = predictor.predict(X_test)
+            y_pred_real = predictor.scaler_y.inverse_transform(y_pred.reshape(-1, 1))
+
+            # Plot results
+            predictor.plot_results(df['Close'].values[-len(y_pred_real):], y_pred_real)
+
+            print("Prediction completed. Check the plots directory for visualization.")
+
+        elif selection_c == "N":
+            config['start_date'] = input("Start Date (YYYY-MM-DD): ")
+            config['end_date'] = input("End Date (YYYY-MM-DD): ")
+            config['ticker'] = ticker
+
+            # Save updated config
+            with open(config_path, 'w') as file:
+                yaml.dump(config, file)
+
+            # Create and run the predictor
+            predictor = XGBoost_Predictor(config_path)
+            predictor.run()
+
+            save_model = input("Save model? Y/N: ").upper()
+            if save_model == "Y":
+                model_filename = "models/xgboost_model.json"
+                predictor.save_model(model_filename)
+                print(f"Model saved to {model_filename}.")
+        else:
+            print("Invalid selection.")
+
     elif selection == "5":
         #LGBM
         from lgb import LGBMRegressorModel

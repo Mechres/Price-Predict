@@ -109,7 +109,7 @@ class CatBoostPredictor:
         return self.model.predict(X)
 
     def catboost_prediction(ticker):
-        predictor = CatBoostPredictor()  # Create an instance of the CatBoostPredictor
+        predictor = CatBoostPredictor()
         print("Catboost Regressor selected.")
         print("Load saved model? (Must be in same directory.)")
         selection_c = input("Y/N: ").strip().upper()

@@ -1,0 +1,22 @@
+end_date: '2024-07-12'
+hyperparameter_tuning:
+  colsample_bytree:
+    max: 1.0
+    min: 0.8
+  learning_rate:
+    max: 0.3
+    min: 0.01
+  max_depth:
+    max: 10
+    min: 3
+  n_estimators:
+    max: 500
+    min: 100
+  n_iter: 20
+  subsample:
+    max: 1.0
+    min: 0.8
+plot_dir: plots
+start_date: '2012-05-22'
+test_size: 0.2
+ticker: BTC-USD

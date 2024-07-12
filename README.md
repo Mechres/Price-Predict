@@ -6,6 +6,13 @@ Main.py & GUI.py files let's you select model, start & end date, available model
 
 ### Update Log:
 ```
+→ 12.07.2024
+Xgboost update:
+- Load & Save added.
+- Bayesian Optimization added.
+- TimeSeriesSplit for data splitting added.
+- Config file added.
+- Plot save added.
 → 09.07.2024
 Prophet Update
 - Save & load works
@@ -22,7 +29,7 @@ Prophet Update
 ### Dependencies:
 
 ```
-pip install tensorflow yfinance ta scikit-learn pandas numpy matplotlib catboost prophet lightgbm tkinter pickle PyYAML
+pip install tensorflow yfinance ta scikit-learn pandas numpy matplotlib catboost prophet lightgbm tkinter pickle PyYAML bayesian-optimization
 ```
 In case of an update breaks something:
 - tensorflow = 2.16.1

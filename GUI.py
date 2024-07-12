@@ -135,6 +135,72 @@ def MetaProphet(ticker, start_date, end_date, load_var, save_var):
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
 
+def xgboost_prediction(ticker, start_date, end_date, load_var, save_var):
+    from xg import XGBoost_Predictor
+    import yaml
+    config_path = "configs/Xgboost_config.yaml"
+
+    try:
+        with open(config_path, 'r') as file:
+            config = yaml.safe_load(file)
+    except FileNotFoundError:
+        config = {
+            "ticker": ticker,
+            "start_date": start_date,
+            "end_date": end_date,
+            "test_size": 0.2,
+            "plot_dir": "plots",
+            "hyperparameter_tuning": {
+                "max_depth": {"min": 3, "max": 10},
+                "n_estimators": {"min": 100, "max": 500},
+                "learning_rate": {"min": 0.01, "max": 0.3},
+                "subsample": {"min": 0.8, "max": 1.0},
+                "colsample_bytree": {"min": 0.8, "max": 1.0},
+                "n_iter": 20
+            }
+        }
+
+    config['start_date'] = start_date
+    config['end_date'] = end_date
+    config['ticker'] = ticker
+
+    # Save updated config
+    with open(config_path, 'w') as file:
+        yaml.dump(config, file)
+
+    predictor = XGBoost_Predictor(config_path)
+
+    try:
+        if load_var.get():
+            model_path = "models/xgboost_model.json"
+            try:
+                predictor.load_model(model_path)
+                messagebox.showinfo("Info", "Model loaded successfully.")
+            except FileNotFoundError:
+                messagebox.showerror("Error", "Model file not found. Please train a new model.")
+                return
+
+            df = predictor.download_data()
+            X_test, _, _, _ = predictor.prepare_data(df)
+
+            y_pred = predictor.predict(X_test)
+            y_pred_real = predictor.scaler_y.inverse_transform(y_pred.reshape(-1, 1))
+
+            predictor.plot_results(df['Close'].values[-len(y_pred_real):], y_pred_real)
+
+            messagebox.showinfo("Info", "Prediction completed. Check the plots directory for visualization.")
+        else:
+            predictor.run()
+
+            if save_var.get():
+                model_filename = "models/xgboost_model.json"
+                predictor.save_model(model_filename)
+                messagebox.showinfo("Info", f"Model saved to {model_filename}.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+
 def run_selected_model(selection, ticker):
     start_date = start_date_entry.get()
     end_date = end_date_entry.get()
@@ -153,15 +219,8 @@ def run_selected_model(selection, ticker):
 
     if selection == "4":
         #XGBoost
-        import xg
-        if load_var.get():
-            xg.loadmodel()
-        else:
-            X_train, X_test, y_train, y_test, scaler_y = xg.yfdown(ticker, start_date, end_date)
-            y_test_real, y_pred_real, model = xg.xgbst(X_train, X_test, y_train, y_test, scaler_y)
-            xg.plot(ticker, y_test_real, y_pred_real)
-            if save_var.get():
-                xg.savemodel(model)
+        xgboost_prediction(ticker, start_date, end_date, load_var, save_var)
+
     if selection == "5":
         #LGBM
         from lgb import LGBMRegressorModel
