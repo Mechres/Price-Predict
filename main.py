@@ -144,33 +144,51 @@ def main():
         else:
             print("Invalid selection.")
 
+
+
     elif selection == "5":
-        #LGBM
-        from lgb import LGBMRegressorModel
+        # LGBM
+        from lgbm_model import LGBMRegressorModel
         print("LGBM selected.")
-        print("Load saved model? (Must be in same directory.)")
+        lgbm_model = LGBMRegressorModel()  # Initialize the model with default config
+        print("Load saved model? (Must be in the 'models' directory.)")
         selection_c = input("Y/N:    ")
-        if selection_c == "Y":
-            LGBMRegressorModel.loadmodel()
-        elif selection_c == "N":
+        if selection_c.upper() == "Y":
+            model = lgbm_model.load_model(ticker)
+            print(f"Model for {ticker} loaded successfully.")
+
+            # Option to test the loaded model with new data
+            test_new_data = input("Do you want to test the model with new data? Y/N:    ")
+            if test_new_data.upper() == "Y":
+                start_Date = input("Start Date for new data (YYYY-MM-DD): ")
+                end_Date = input("End Date for new data (YYYY-MM-DD): ")
+                rmse, dates, y_true, y_pred = lgbm_model.predict_new_data(model, ticker, start_Date, end_Date)
+                print(f'RMSE on new data: {rmse}')
+                print(f'Predictions saved in plots/{ticker}_prediction_new_data.png')
+                # Option to display some of the predictions
+                show_predictions = input("Do you want to see some of the predictions? Y/N:    ")
+                if show_predictions.upper() == "Y":
+                    num_predictions = min(30, len(dates))  # Show up to 30 predictions
+                    print("\nSample predictions:")
+                    print("Date\t\tActual Price\tPredicted Price")
+                    for i in range(num_predictions):
+                        print(f"{dates[i]:%Y-%m-%d}\t{y_true[i][0]:.2f}\t\t{y_pred[i][0]:.2f}")
+
+        elif selection_c.upper() == "N":
             start_Date = input("Start Date (YYYY-MM-DD): ")
             end_Date = input("End Date (YYYY-MM-DD): ")
-            X_train, X_test, y_train, y_test, scaler_y = LGBMRegressorModel.yfdown(ticker, start_Date, end_Date)
-            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test,
-                                                                            scaler_y)
-            best_params = grid_search.best_params_
-            model = LGBMRegressorModel.model(X_train, y_train, X_test, y_test, best_params)
-            rmse = LGBMRegressorModel.yhat(ticker, model, X_test, y_test, scaler_y)
+            model, rmse = lgbm_model.run(ticker, start_Date, end_Date)
             print(f'RMSE: {rmse}')
-
             savemodel = input("Save model? Y/N  ")
-            if savemodel == "Y":
-                LGBMRegressorModel.savemodel()
+            if savemodel.upper() == "Y":
+                lgbm_model.save_model(model, ticker)
+                print(f"Model for {ticker} saved successfully.")
             else:
-                pass
+                print("Model not saved.")
+        else:
+            print("Invalid input.")
     else:
         print('Incorrect Input')
-
 
 if __name__ == "__main__":
     main()

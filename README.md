@@ -6,6 +6,13 @@ Main.py & GUI.py files let's you select model, start & end date, available model
 
 ### Update Log:
 ```
+→ 16.07.2024
+LightGBM Update:
+- Load & Save added.
+- Docstring added.
+- Code improvements.
+- Config file added.
+- Models & plots now save to the corresponding folder.
 → 12.07.2024
 Xgboost update:
 - Load & Save added.

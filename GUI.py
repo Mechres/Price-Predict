@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import numpy as np
 import pickle
 from Kedi import CatBoostPredictor
+from lgbm_model import LGBMRegressorModel
 
 
 def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
@@ -75,6 +76,7 @@ def lstm_prediction(ticker, start_date, end_date, load_var, save_var):
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
 
 def MetaProphet(ticker, start_date, end_date, load_var, save_var):
     # Prophet
@@ -201,6 +203,29 @@ def xgboost_prediction(ticker, start_date, end_date, load_var, save_var):
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
 
+def run_lgbm(ticker, start_date, end_date, load_var, save_var):
+    lgbm_model = LGBMRegressorModel()
+
+    if load_var.get():
+        try:
+            model = lgbm_model.load_model(ticker)
+            rmse, dates, y_true, y_pred = lgbm_model.predict_new_data(model, ticker, start_date, end_date)
+            messagebox.showinfo("LGBM Results",
+                                f'RMSE on new data: {rmse}\n\nPredictions saved in plots/{ticker}_prediction_new_data.png')
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to load model or predict: {str(e)}")
+    else:
+        try:
+            model, rmse = lgbm_model.run(ticker, start_date, end_date)
+            messagebox.showinfo("LGBM Results", f'RMSE: {rmse}')
+
+            if save_var.get():
+                lgbm_model.save_model(model, ticker)
+                messagebox.showinfo("Save Successful", f"Model for {ticker} saved successfully.")
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to run LGBM model: {str(e)}")
+
+
 def run_selected_model(selection, ticker):
     start_date = start_date_entry.get()
     end_date = end_date_entry.get()
@@ -223,17 +248,7 @@ def run_selected_model(selection, ticker):
 
     if selection == "5":
         #LGBM
-        from lgb import LGBMRegressorModel
-        if load_var.get():
-            pass
-        else:
-            X_train, X_test, y_train, y_test, scaler_y = LGBMRegressorModel.yfdown(ticker, start_date, end_date)
-            grid_search, grid_search.best_params_ = LGBMRegressorModel.grid(ticker, X_train, y_train, X_test, y_test,
-                                                                            scaler_y)
-            best_params = grid_search.best_params_
-            model = LGBMRegressorModel.model(X_train, y_train, X_test, y_test, best_params)
-            rmse = LGBMRegressorModel.yhat(ticker, model, X_test, y_test, scaler_y)
-            print(f'RMSE: {rmse}')
+        run_lgbm(ticker, start_date, end_date, load_var, save_var)
 
 
 window = tk.Tk()
