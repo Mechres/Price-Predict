@@ -1,11 +1,14 @@
 # Crypto & Stock Price Prediction with Various Neural Networks
 Crypto & Stock Price Prediction and Forecasting Toolkit.
 
-Main.py & GUI.py files let's you select model, start & end date, available models are: Lstm, Catboost, Prophet, XGBoost and LGBM.
+Main.py & GUI.py files let's you select model, start & end date, available models are: Lstm, Catboost, Prophet, XGBoost, LGBM and Random Forest.
 
 
 ### Update Log:
 ```
+→ 24.07.2024
+- File names are updated and more readable now.
+- Added Random Forest Regressor.
 → 16.07.2024
 LightGBM Update:
 - Load & Save added.
@@ -66,7 +69,7 @@ LightGBM is a gradient boosting framework that uses tree based learning algorith
 ## Planned Features:
 -  ~~Graphical User Interface (GUI)~~
 -  ~~Save & Load~~
-- Random Forest Regressor
+- ~~Random Forest Regressor~~
 - Gradient Boosting Regressor
 
 ## Important Notes:

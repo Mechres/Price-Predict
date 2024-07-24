@@ -9,22 +9,23 @@ def main():
     print("3.Prophet")
     print("4.Xgboost")
     print("5.LGBM")
+    print("6. Random Forest")
     selection = input("Select Model:    ")
 
     if selection == "1":
         # LSTM
-        from LstmC import LSTMPredictor
+        from Lstm_model import LSTMPredictor
         LSTMPredictor.run(ticker)
 
 
     elif selection == "2":
         #Catboost
-        from Kedi import CatBoostPredictor
+        from Catboost_Regressor import CatBoostPredictor
         CatBoostPredictor.catboost_prediction(ticker)
 
     elif selection == "3":
         # Prophet
-        from prop import MProphet
+        from Prophet_model import MProphet
         import yaml
         print("Prophet selected.")
         # Load the config file
@@ -73,7 +74,7 @@ def main():
 
     elif selection == "4":
         #XGBoost
-        from xg import XGBoost_Predictor
+        from Xgboost_model import XGBoost_Predictor
         import yaml
 
         config_path = "configs/Xgboost_config.yaml"
@@ -148,7 +149,7 @@ def main():
 
     elif selection == "5":
         # LGBM
-        from lgbm_model import LGBMRegressorModel
+        from Lgbm_model import LGBMRegressorModel
         print("LGBM selected.")
         lgbm_model = LGBMRegressorModel()  # Initialize the model with default config
         print("Load saved model? (Must be in the 'models' directory.)")
@@ -182,6 +183,50 @@ def main():
             savemodel = input("Save model? Y/N  ")
             if savemodel.upper() == "Y":
                 lgbm_model.save_model(model, ticker)
+                print(f"Model for {ticker} saved successfully.")
+            else:
+                print("Model not saved.")
+        else:
+            print("Invalid input.")
+
+    elif selection == "6":
+        # Random Forest
+        from Random_Forest_Regressor import RandomForestPredictor
+        print("Random Forest selected.")
+        rf_predictor = RandomForestPredictor()
+
+        print("Load saved model? (Must be in the 'models' directory.)")
+        selection_c = input("Y/N: ")
+        if selection_c.upper() == "Y":
+            rf_predictor.load_model()
+            print(f"Model for {ticker} loaded successfully.")
+
+            start_date = input("Start Date for new data (YYYY-MM-DD): ")
+            end_date = input("End Date for new data (YYYY-MM-DD): ")
+            mse, mae, r2, dates, y_true, y_pred = rf_predictor.predict_new_data(ticker, start_date, end_date)
+            print(f'MSE on new data: {mse}')
+            print(f'MAE on new data: {mae}')
+            print(f'R-squared on new data: {r2}')
+            print(f'Predictions saved in plots/{ticker}_prediction_new_data.png')
+            # Option to display some of the predictions
+            show_predictions = input("Do you want to see some of the predictions? Y/N: ")
+            if show_predictions.upper() == "Y":
+                num_predictions = min(30, len(dates))  # Show up to 30 predictions
+                print("\nSample predictions:")
+                print("Date\t\tActual Price\tPredicted Price")
+                for i in range(num_predictions):
+                    print(f"{dates[i]:%Y-%m-%d}\t{y_true[i][0]:.2f}\t\t{y_pred[i][0]:.2f}")
+
+        elif selection_c.upper() == "N":
+            start_date = input("Start Date (YYYY-MM-DD): ")
+            end_date = input("End Date (YYYY-MM-DD): ")
+            mse, mae, r2 = rf_predictor.run(ticker, start_date, end_date)
+            print(f'MSE: {mse}')
+            print(f'MAE: {mae}')
+            print(f'R-squared: {r2}')
+            savemodel = input("Save model? Y/N: ")
+            if savemodel.upper() == "Y":
+                rf_predictor.save_model()
                 print(f"Model for {ticker} saved successfully.")
             else:
                 print("Model not saved.")

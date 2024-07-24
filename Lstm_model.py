@@ -217,8 +217,6 @@ class LSTMPredictor:
             print("An error occurred. Please check the logs for more information.")
 
 
-"""
-# Test
 if __name__ == "__main__":
     try:
         predictor = LSTMPredictor()
@@ -245,4 +243,4 @@ if __name__ == "__main__":
         # Load model
         loaded_predictor = LSTMPredictor.load_model(Config.MODEL_SAVE_PATH)
     except Exception as e:
-        logging.error(f"An error occurred in the main execution: {str(e)}")"""
+        logging.error(f"An error occurred in the main execution: {str(e)}")

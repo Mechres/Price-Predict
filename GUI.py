@@ -2,11 +2,12 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import numpy as np
 import pickle
-from Kedi import CatBoostPredictor
-from lgbm_model import LGBMRegressorModel
+
+from Lgbm_model import LGBMRegressorModel
 
 
 def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
+    from Catboost_Regressor import CatBoostPredictor
     predictor = CatBoostPredictor()
 
     try:
@@ -36,7 +37,7 @@ def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
 
 
 def lstm_prediction(ticker, start_date, end_date, load_var, save_var):
-    from LstmC import LSTMPredictor
+    from Lstm_model import LSTMPredictor
     from configs.LstmConfig import Config
     try:
         if load_var.get():
@@ -80,7 +81,7 @@ def lstm_prediction(ticker, start_date, end_date, load_var, save_var):
 
 def MetaProphet(ticker, start_date, end_date, load_var, save_var):
     # Prophet
-    from prop import MProphet
+    from Prophet_model import MProphet
     import yaml
     try:
         # Load the config file
@@ -138,7 +139,7 @@ def MetaProphet(ticker, start_date, end_date, load_var, save_var):
 
 
 def xgboost_prediction(ticker, start_date, end_date, load_var, save_var):
-    from xg import XGBoost_Predictor
+    from Xgboost_model import XGBoost_Predictor
     import yaml
     config_path = "configs/Xgboost_config.yaml"
 
@@ -226,6 +227,34 @@ def run_lgbm(ticker, start_date, end_date, load_var, save_var):
             messagebox.showerror("Error", f"Failed to run LGBM model: {str(e)}")
 
 
+def random_forest_prediction(ticker, start_date, end_date, load_var, save_var):
+    from Random_Forest_Regressor import RandomForestPredictor
+    rf_predictor = RandomForestPredictor()
+
+    try:
+        if load_var.get():
+            try:
+                rf_predictor.load_model()
+                messagebox.showinfo("Info", "Model loaded successfully.")
+            except FileNotFoundError:
+                messagebox.showerror("Error", "Model file not found. Please train a new model.")
+                return
+
+            mse, mae, r2, dates, y_true, y_pred = rf_predictor.predict_new_data(ticker, start_date, end_date)
+            messagebox.showinfo("Random Forest Results",
+                                f'MSE: {mse}\nMAE: {mae}\nR-squared: {r2}\n\nPredictions saved in plots/{ticker}_prediction_new_data.png')
+        else:
+            mse, mae, r2 = rf_predictor.run(ticker, start_date, end_date)
+            messagebox.showinfo("Random Forest Results", f'MSE: {mse}\nMAE: {mae}\nR-squared: {r2}')
+
+            if save_var.get():
+                rf_predictor.save_model()
+                messagebox.showinfo("Save Successful", f"Model for {ticker} saved successfully.")
+
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred: {str(e)}")
+
+
 def run_selected_model(selection, ticker):
     start_date = start_date_entry.get()
     end_date = end_date_entry.get()
@@ -249,6 +278,10 @@ def run_selected_model(selection, ticker):
     if selection == "5":
         #LGBM
         run_lgbm(ticker, start_date, end_date, load_var, save_var)
+
+    if selection == "6":
+        # Random Forest
+        random_forest_prediction(ticker, start_date, end_date, load_var, save_var)
 
 
 window = tk.Tk()
@@ -291,6 +324,7 @@ ttk.Radiobutton(model_frame, text="Catboost", variable=model_var, value="2").pac
 ttk.Radiobutton(model_frame, text="Prophet", variable=model_var, value="3").pack(anchor="w")
 ttk.Radiobutton(model_frame, text="Xgboost", variable=model_var, value="4").pack(anchor="w")
 ttk.Radiobutton(model_frame, text="LGBM", variable=model_var, value="5").pack(anchor="w")
+ttk.Radiobutton(model_frame, text="Random Forest", variable=model_var, value="6").pack(anchor="w")
 
 # Run Button
 run_button = ttk.Button(window, text="Run", command=lambda: run_selected_model(model_var.get(), ticker_entry.get()))

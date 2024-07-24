@@ -1,7 +1,7 @@
 cv_horizon: 365 days
 cv_initial: 730 days
 cv_period: 180 days
-end_date: '2024-07-09'
+end_date: '2024-05-22'
 forecast_periods: 365
 hyperparameters:
   changepoint_prior_scale: 0.05
@@ -22,5 +22,5 @@ param_grid:
   - 1.0
   - 10.0
 plot_save_dir: plots
-start_date: '2015-05-22'
+start_date: '2020-05-22'
 ticker: BTC-USD
