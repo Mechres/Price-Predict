@@ -3,7 +3,7 @@ from tkinter import ttk, messagebox
 import numpy as np
 import pickle
 
-from Lgbm_model import LGBMRegressorModel
+from lgbm_model import LGBMRegressorModel
 
 
 def catboost_prediction(ticker, start_date, end_date, load_var, save_var):
