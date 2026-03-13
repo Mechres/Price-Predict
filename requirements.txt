@@ -1,7 +1,7 @@
 bayesian-optimization==1.5.1
 catboost==1.2.5
 joblib==1.4.2
-lightgbm==4.4.0
+lightgbm==4.6.0
 matplotlib==3.9.1
 numpy==1.26.4
 pandas==2.2.2
